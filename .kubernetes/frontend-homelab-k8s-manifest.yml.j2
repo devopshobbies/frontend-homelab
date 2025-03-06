@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-homelab-config
+  namespace: dev
+data:
+  BACKEND_BASE_URL: http://localhost:8000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-homelab
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-homelab
+  template:
+    metadata:
+      labels:
+        app: frontend-homelab
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      containers:
+      - name: frontend-homelab
+        image: {{ image }}    
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "1000m"
+            memory: "1Gi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+        env:
+        - name: BACKEND_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: BACKEND_BASE_URL
+              name: frontend-homelab-config
+        tty: true
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-homelab
+  namespace: dev
+status:
+  loadBalancer: {}
+spec:
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: frontend-homelab
+  type: ClusterIP
